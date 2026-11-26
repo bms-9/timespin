@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14102b">
+<title>TimeSpin</title>
+<style>
+:root{
+  --bg:#14102b; --bg2:#1d1740; --card:#262050; --line:#3a3170;
+  --text:#f4f1ff; --muted:#a39cd1; --pink:#ff4fa3; --cyan:#3de0ff; --good:#2ee59d; --bad:#ff5a6e; --gold:#ffd24a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overscroll-behavior:none}
+body{background:radial-gradient(120% 80% at 50% -10%,#2b1f66 0%,var(--bg) 60%)}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:520px;margin:0 auto;padding-top:env(safe-area-inset-top)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.scroll{flex:1;overflow-y:auto;padding:12px 16px 24px;-webkit-overflow-scrolling:touch}
+.bar{padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--bg) 35%)}
+.btn{display:block;width:100%;padding:16px;border-radius:16px;font-weight:800;font-size:17px;letter-spacing:.3px;background:linear-gradient(135deg,var(--pink),#9a4dff);box-shadow:0 8px 24px rgba(255,79,163,.35)}
+.btn:disabled{opacity:.35;box-shadow:none}
+.btn.alt{background:var(--card);box-shadow:none;border:1px solid var(--line)}
+h1{font-size:42px;margin:28px 0 4px;letter-spacing:-1px;text-align:center}
+h1 span{background:linear-gradient(90deg,var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{text-align:center;color:var(--muted);margin:0 0 22px}
+.label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:18px 0 8px}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;padding:13px 0;border-radius:12px;background:var(--card);border:1px solid var(--line);font-weight:700}
+.seg button.on{background:linear-gradient(135deg,var(--pink),#9a4dff);border-color:transparent}
+input.name{width:100%;padding:13px 14px;margin-bottom:8px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:16px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 8px}
+.chip{flex:none;padding:7px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.chip.on{color:var(--text);border-color:var(--cyan);box-shadow:0 0 0 2px rgba(61,224,255,.25)}
+.chip b{color:var(--gold);margin-left:4px}
+.discwrap{display:flex;flex-direction:column;align-items:center;margin:6px 0 4px}
+.disc{position:relative;width:200px;height:200px}
+.disc svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.vinyl{position:absolute;inset:12px;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,#0d0a20 0 3px,#171235 3px 6px);box-shadow:0 10px 30px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+.spin .vinyl{animation:sp 3s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.vlabel{width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:#14102b}
+.status{margin-top:10px;color:var(--muted);font-size:14px;min-height:20px;text-align:center}
+.link{color:var(--cyan);font-size:14px;font-weight:600;padding:6px 10px}
+.tl-title{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.tl{position:relative;padding-left:0}
+.card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.card .yr{font-size:24px;font-weight:900;min-width:64px;color:var(--cyan);letter-spacing:-.5px}
+.card .meta{display:flex;flex-direction:column;min-width:0}
+.card .meta b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.new{border-color:var(--good);box-shadow:0 0 0 2px rgba(46,229,157,.3);animation:pop .4s}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.slot{display:flex;align-items:center;justify-content:center;width:100%;height:34px;margin:4px 0;border-radius:10px;border:2px dashed var(--line);color:var(--muted);font-weight:800;font-size:13px}
+.slot.sel{height:48px;border:2px solid var(--pink);background:rgba(255,79,163,.18);color:var(--text)}
+.slot.off{opacity:.25;pointer-events:none}
+.reveal{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 4px}
+.reveal img{width:150px;height:150px;border-radius:16px;object-fit:cover;box-shadow:0 10px 30px rgba(0,0,0,.5);background:var(--card)}
+.reveal .noimg{width:150px;height:150px;border-radius:16px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:48px}
+.reveal .year{font-size:64px;font-weight:900;letter-spacing:-2px;line-height:1.05;margin-top:10px}
+.reveal .ok{color:var(--good)} .reveal .no{color:var(--bad)}
+.reveal .verdict{font-weight:800;font-size:18px;margin-top:2px}
+.reveal .t{font-weight:700;margin-top:8px;font-size:17px}
+.reveal .a{color:var(--muted);font-size:14px}
+.win{text-align:center;padding-top:40px}
+.win .big{font-size:60px}
+.win h2{font-size:30px;margin:8px 0}
+.board{margin:20px 0;text-align:left}
+.board div{display:flex;justify-content:space-between;padding:12px 14px;border-radius:12px;background:var(--card);margin-bottom:8px;font-weight:700}
+.err{background:rgba(255,90,110,.12);border:1px solid var(--bad);border-radius:12px;padding:12px;margin:10px 0;font-size:14px;text-align:center}
+.hint{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// [title, artist, original release year]
+const SONGS = [
+["Johnny B. Goode","Chuck Berry",1958],["Hound Dog","Elvis Presley",1956],["Jailhouse Rock","Elvis Presley",1957],
+["Twist and Shout","The Beatles",1963],["Hey Jude","The Beatles",1968],["Let It Be","The Beatles",1970],
+["Satisfaction","The Rolling Stones",1965],["Respect","Aretha Franklin",1967],["Light My Fire","The Doors",1967],
+["My Girl","The Temptations",1964],["Good Vibrations","The Beach Boys",1966],["Like a Rolling Stone","Bob Dylan",1965],
+["Oh, Pretty Woman","Roy Orbison",1964],["Stand by Me","Ben E. King",1961],["California Dreamin'","The Mamas & The Papas",1965],
+["Sunshine of Your Love","Cream",1967],["Purple Haze","Jimi Hendrix",1967],["Sweet Caroline","Neil Diamond",1969],
+["Brown Eyed Girl","Van Morrison",1967],
+["Bohemian Rhapsody","Queen",1975],["Stairway to Heaven","Led Zeppelin",1971],["Hotel California","Eagles",1976],
+["Imagine","John Lennon",1971],["Superstition","Stevie Wonder",1972],["Dancing Queen","ABBA",1976],
+["Stayin' Alive","Bee Gees",1977],["I Will Survive","Gloria Gaynor",1978],["Go Your Own Way","Fleetwood Mac",1977],
+["Dream On","Aerosmith",1973],["Smoke on the Water","Deep Purple",1972],["Take Me Home, Country Roads","John Denver",1971],
+["Another One Bites the Dust","Queen",1980],["We Will Rock You","Queen",1977],["Born to Run","Bruce Springsteen",1975],
+["Lean on Me","Bill Withers",1972],["Let's Get It On","Marvin Gaye",1973],["September","Earth, Wind & Fire",1978],
+["Le Freak","Chic",1978],["Hot Stuff","Donna Summer",1979],["Don't Stop Me Now","Queen",1979],
+["Sweet Home Alabama","Lynyrd Skynyrd",1974],["More Than a Feeling","Boston",1976],["Y.M.C.A.","Village People",1978],
+["Heart of Glass","Blondie",1978],["Highway to Hell","AC/DC",1979],
+["Billie Jean","Michael Jackson",1982],["Thriller","Michael Jackson",1982],["Beat It","Michael Jackson",1982],
+["Don't Stop Believin'","Journey",1981],["Livin' on a Prayer","Bon Jovi",1986],["Sweet Child O' Mine","Guns N' Roses",1987],
+["Take On Me","a-ha",1985],["Girls Just Want to Have Fun","Cyndi Lauper",1983],["Like a Virgin","Madonna",1984],
+["Purple Rain","Prince",1984],["When Doves Cry","Prince",1984],["Every Breath You Take","The Police",1983],
+["Sweet Dreams (Are Made of This)","Eurythmics",1983],["Africa","Toto",1982],["Eye of the Tiger","Survivor",1982],
+["Jump","Van Halen",1984],["Never Gonna Give You Up","Rick Astley",1987],["Wake Me Up Before You Go-Go","Wham!",1984],
+["Don't You (Forget About Me)","Simple Minds",1985],["With or Without You","U2",1987],["Back in Black","AC/DC",1980],
+["Bette Davis Eyes","Kim Carnes",1981],["Tainted Love","Soft Cell",1981],["Pour Some Sugar on Me","Def Leppard",1987],
+["Faith","George Michael",1987],["I Wanna Dance with Somebody","Whitney Houston",1987],["Don't Worry, Be Happy","Bobby McFerrin",1988],
+["Smells Like Teen Spirit","Nirvana",1991],["Losing My Religion","R.E.M.",1991],["Wonderwall","Oasis",1995],
+["...Baby One More Time","Britney Spears",1998],["I Want It That Way","Backstreet Boys",1999],["No Scrubs","TLC",1999],
+["Waterfalls","TLC",1994],["Gangsta's Paradise","Coolio",1995],["Under the Bridge","Red Hot Chili Peppers",1991],
+["Creep","Radiohead",1992],["Wannabe","Spice Girls",1996],["Smooth","Santana",1999],
+["My Heart Will Go On","Celine Dion",1997],["I Will Always Love You","Whitney Houston",1992],["Vogue","Madonna",1990],
+["U Can't Touch This","MC Hammer",1990],["Ice Ice Baby","Vanilla Ice",1990],["Black Hole Sun","Soundgarden",1994],
+["Zombie","The Cranberries",1994],["All Star","Smash Mouth",1999],["Genie in a Bottle","Christina Aguilera",1999],
+["Ironic","Alanis Morissette",1996],["Basket Case","Green Day",1994],["Enter Sandman","Metallica",1991],
+["Torn","Natalie Imbruglia",1997],["Mambo No. 5","Lou Bega",1999],
+["Crazy in Love","Beyonce",2003],["Hey Ya!","OutKast",2003],["Mr. Brightside","The Killers",2004],
+["Seven Nation Army","The White Stripes",2003],["Lose Yourself","Eminem",2002],["In da Club","50 Cent",2003],
+["Yeah!","Usher",2004],["Umbrella","Rihanna",2007],["Toxic","Britney Spears",2003],
+["Since U Been Gone","Kelly Clarkson",2004],["Hey There Delilah","Plain White T's",2006],["Viva la Vida","Coldplay",2008],
+["Clocks","Coldplay",2002],["Bad Romance","Lady Gaga",2009],["Poker Face","Lady Gaga",2008],
+["Boulevard of Broken Dreams","Green Day",2004],["Chasing Cars","Snow Patrol",2006],["Crazy","Gnarls Barkley",2006],
+["Stronger","Kanye West",2007],["Single Ladies","Beyonce",2008],["Use Somebody","Kings of Leon",2008],
+["Fireflies","Owl City",2009],["I Gotta Feeling","The Black Eyed Peas",2009],["Hips Don't Lie","Shakira",2006],
+["Complicated","Avril Lavigne",2002],["Without Me","Eminem",2002],["Hot in Herre","Nelly",2002],
+["Rolling in the Deep","Adele",2010],["Somebody That I Used to Know","Gotye",2011],["Party Rock Anthem","LMFAO",2011],
+["Gangnam Style","PSY",2012],["Get Lucky","Daft Punk",2013],["Royals","Lorde",2013],["Happy","Pharrell Williams",2013],
+["Shake It Off","Taylor Swift",2014],["Uptown Funk","Mark Ronson",2014],["All of Me","John Legend",2013],
+["Thinking Out Loud","Ed Sheeran",2014],["Shape of You","Ed Sheeran",2017],["Despacito","Luis Fonsi",2017],
+["Closer","The Chainsmokers",2016],["Sorry","Justin Bieber",2015],["Hello","Adele",2015],
+["Can't Stop the Feeling!","Justin Timberlake",2016],["Old Town Road","Lil Nas X",2019],["bad guy","Billie Eilish",2019],
+["Sunflower","Post Malone",2018],["God's Plan","Drake",2018],["Havana","Camila Cabello",2017],
+["Blinding Lights","The Weeknd",2019],
+["Levitating","Dua Lipa",2020],["drivers license","Olivia Rodrigo",2021],["good 4 u","Olivia Rodrigo",2021],
+["As It Was","Harry Styles",2022],["Flowers","Miley Cyrus",2023],["Anti-Hero","Taylor Swift",2022],
+["Heat Waves","Glass Animals",2020],["Stay","The Kid LAROI",2021],["Bad Habits","Ed Sheeran",2021],
+["Vampire","Olivia Rodrigo",2023],["Espresso","Sabrina Carpenter",2024],["Die With a Smile","Lady Gaga",2024]
+].map(([t,a,y])=>({t,a,y,p:undefined}));
+
+const au = new Audio();
+au.preload = "auto";
+let G = null;
+let setup = {n:2, goal:7, paper:false, names:["Player 1","Player 2","Player 3","Player 4"]};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const norm = x => String(x).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\(.*?\)|\[.*?\]/g,"").replace(/[^a-z0-9]/g,"");
+const BAD = /\b(live|remix|karaoke|tribute|cover|instrumental|acoustic|demo)\b/i;
+
+// returns {url, art} or null (not found). Throws on network failure.
+async function lookup(s){
+  if(s.p !== undefined) return s.p;
+  const q = encodeURIComponent(s.t + " " + s.a);
+  const r = await fetch("https://itunes.apple.com/search?term="+q+"&media=music&entity=song&limit=15");
+  if(!r.ok) throw new Error("http "+r.status);
+  const j = await r.json();
+  const t = norm(s.t), a = norm(s.a.replace(/^the /i,"")).slice(0,6);
+  const withPrev = (j.results||[]).filter(x=>x.previewUrl && norm(x.trackName).includes(t));
+  const clean = withPrev.filter(x=>BAD.test(s.t) || !BAD.test(x.trackName));
+  const pick = clean.find(x=>norm(x.artistName).includes(a)) || withPrev.find(x=>norm(x.artistName).includes(a)) || null;
+  s.p = pick ? {url:pick.previewUrl, art:(pick.artworkUrl100||"").replace("100x100","400x400")} : null;
+  return s.p;
+}
+
+function newGame(){
+  const n = setup.n;
+  const deck = shuffle(SONGS);
+  let di = 0;
+  const players = [];
+  for(let i=0;i<n;i++){
+    const s = deck[di++];
+    players.push({name:(setup.names[i]||"").trim()||("Player "+(i+1)), tl:[s], strikes:0});
+  }
+  G = {players, cur:0, goal:setup.goal, paper:setup.paper, solo:n===1, deck, di, song:null, media:null, slot:null, phase:"loading", res:null, err:null, playing:false, lastNew:null};
+  nextSong();
+}
+
+async function nextSong(){
+  G.phase = "loading"; G.err = null; G.slot = null; G.res = null; G.media = null; G.song = null;
+  stopAudio(); render();
+  let tries = 0;
+  while(tries < 8){
+    if(G.di >= G.deck.length){ G.deck = shuffle(SONGS); G.di = 0; }
+    const s = G.deck[G.di];
+    try{
+      const m = await lookup(s);
+      G.di++;
+      if(m){ G.song = s; G.media = m; G.phase = "listen"; au.src = m.url; render(); prefetch(); return; }
+    }catch(e){
+      G.err = "Could not reach the music service. Check your connection.";
+      G.phase = "error"; render(); return;
+    }
+    tries++;
+  }
+  G.err = "Could not find playable previews. Try again."; G.phase = "error"; render();
+}
+function prefetch(){ const s = G.deck[G.di]; if(s) lookup(s).catch(()=>{}); }
+
+function stopAudio(){ try{au.pause();}catch(e){} G && (G.playing=false); }
+au.addEventListener("timeupdate", ()=>{
+  const el = $("#ring"); if(!el || !au.duration) return;
+  const C = 2*Math.PI*96;
+  el.style.strokeDashoffset = C*(1 - au.currentTime/au.duration);
+});
+au.addEventListener("ended", ()=>{ G.playing=false; syncDisc(); });
+au.addEventListener("pause", ()=>{ if(G){G.playing=false; syncDisc();} });
+au.addEventListener("playing", ()=>{ if(G){G.playing=true; syncDisc();} });
+au.addEventListener("error", ()=>{ if(G && G.phase==="listen"){ G.err="This clip will not play. Skip it."; render(); } });
+
+function syncDisc(){
+  const d = $("#disc"); if(d) d.classList.toggle("spin", !!G.playing);
+  const s = $("#status"); if(s) s.textContent = G.playing ? "Playing... place it on the timeline" : "Tap the disc to play";
+}
+function togglePlay(){
+  if(G.phase!=="listen") return;
+  if(au.paused){ if(au.ended || au.currentTime>=(au.duration||99)-0.2) au.currentTime=0; au.play().catch(()=>{ G.err="Playback blocked. Tap the disc again."; render(); }); }
+  else au.pause();
+}
+function skip(){ nextSong(); }
+function pick(i){ if(G.phase!=="listen") return; G.slot = (G.slot===i?null:i); render(true); }
+
+function lock(){
+  if(G.phase!=="listen" || G.slot===null) return;
+  const p = G.players[G.cur], tl = p.tl, y = G.song.y, i = G.slot;
+  const ok = (i===0 || tl[i-1].y <= y) && (i===tl.length || y <= tl[i].y);
+  G.res = {ok, song:G.song, media:G.media};
+  if(ok){ tl.splice(i,0,G.song); G.lastNew = G.song; } else { p.strikes++; G.lastNew = null; }
+  G.phase = "reveal"; au.pause(); render();
+}
+function revealPaper(){
+  if(G.phase!=="listen") return;
+  G.res = {ok:null, song:G.song, media:G.media};
+  G.phase = "reveal"; au.pause(); render();
+}
+function endPaper(){ G=null; stopAudio(); render(); }
+function over(){
+  if(G.paper) return false;
+  const p = G.players[G.cur];
+  if(G.solo) return p.strikes>=3 || p.tl.length>=G.goal;
+  return p.tl.length>=G.goal;
+}
+function next(){
+  if(over()){ G.phase="end"; render(); return; }
+  if(!G.solo) G.cur = (G.cur+1)%G.players.length;
+  nextSong();
+}
+
+// ---------- rendering ----------
+function render(keepScroll){
+  const app = $("#app");
+  const sc = keepScroll && $(".scroll") ? $(".scroll").scrollTop : 0;
+  if(!G){ app.innerHTML = setupHTML(); return; }
+  if(G.phase==="end"){ app.innerHTML = endHTML(); return; }
+  app.innerHTML = gameHTML();
+  if(keepScroll && $(".scroll")) $(".scroll").scrollTop = sc;
+  if(G.phase==="listen") syncDisc();
+}
+
+function setupHTML(){
+  const nm = [];
+  for(let i=0;i<setup.n;i++) nm.push('<input class="name" maxlength="14" value="'+esc(setup.names[i])+'" oninput="setup.names['+i+']=this.value" placeholder="Player '+(i+1)+'">');
+  return '<div class="scroll">'
+   +'<h1><span>TimeSpin</span></h1><p class="sub">Hear it. Guess when. Build your timeline.</p>'
+   +'<div class="label">Players</div><div class="seg">'+[1,2,3,4].map(n=>'<button class="'+(setup.n===n?'on':'')+'" onclick="setup.n='+n+';render()">'+n+'</button>').join('')+'</div>'
+   +'<div class="label">Names</div>'+nm.join('')
+   +'<div class="label">Mode</div><div class="seg"><button class="'+(!setup.paper?'on':'')+'" onclick="setup.paper=false;render()">On screen</button><button class="'+(setup.paper?'on':'')+'" onclick="setup.paper=true;render()">Paper cards</button></div>'
+   +(setup.paper?'':'<div class="label">Cards to win</div><div class="seg">'+[5,7,10].map(n=>'<button class="'+(setup.goal===n?'on':'')+'" onclick="setup.goal='+n+';render()">'+n+'</button>').join('')+'</div>')
+   +'<p class="hint">'+(setup.paper?'Paper mode: the phone only plays songs and reveals the year. Everyone writes the year on a slip of paper, places it in their row on the table, then you reveal and check.':(setup.n===1?'Solo: reach the goal before 3 wrong guesses.':'Pass the phone each turn. First to the goal wins.'))+'</p>'
+   +'</div><div class="bar"><button class="btn" onclick="newGame()">Start game</button></div>';
+}
+
+function chipsHTML(){
+  if(G.paper) return G.players.length>1 ? '<div class="chips">'+G.players.map((p,i)=>'<div class="chip '+(i===G.cur?'on':'')+'">'+esc(p.name)+'</div>').join('')+'</div>' : '<div class="chips"></div>';
+  return '<div class="chips">'+G.players.map((p,i)=>'<div class="chip '+(i===G.cur?'on':'')+'">'+esc(p.name)+'<b>'+p.tl.length+'/'+G.goal+'</b>'+(G.solo?' <span style="color:var(--bad)">'+'x'.repeat(p.strikes)+'</span>':'')+'</div>').join('')+'</div>';
+}
+
+function cardHTML(s,isNew){
+  return '<div class="card '+(isNew?'new':'')+'"><div class="yr">'+s.y+'</div><div class="meta"><b>'+esc(s.t)+'</b><span>'+esc(s.a)+'</span></div></div>';
+}
+
+function timelineHTML(){
+  const p = G.players[G.cur], tl = p.tl, listen = G.phase==="listen";
+  let h = '<div class="tl-title">'+esc(p.name)+(listen?': tap where this song belongs':"'s timeline")+'</div><div class="tl">';
+  for(let i=0;i<=tl.length;i++){
+    if(listen) h += '<button class="slot '+(G.slot===i?'sel':'')+'" onclick="pick('+i+')">'+(G.slot===i?'Your song goes here':'+')+'</button>';
+    if(i<tl.length) h += cardHTML(tl[i], G.phase==="reveal" && G.lastNew===tl[i]);
+  }
+  if(!listen && false) h += '';
+  return h+'</div>';
+}
+
+function gameHTML(){
+  const p = G.players[G.cur];
+  let top = "", bar = "";
+  if(G.phase==="loading"){
+    top = '<div class="discwrap"><div class="status" style="margin-top:60px;font-size:16px">Loading next song...</div></div>';
+  } else if(G.phase==="error"){
+    top = '<div class="err">'+esc(G.err)+'</div>';
+    bar = '<div class="bar"><button class="btn" onclick="nextSong()">Retry</button></div>';
+  } else if(G.phase==="listen"){
+    const C = 2*Math.PI*96;
+    top = '<div class="discwrap"><div class="disc" id="disc" onclick="togglePlay()">'
+      +'<svg viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="96" fill="none" stroke="#3a3170" stroke-width="4"/>'
+      +'<circle id="ring" cx="100" cy="100" r="96" fill="none" stroke="#3de0ff" stroke-width="4" stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'"/></svg>'
+      +'<div class="vinyl"><div class="vlabel">?</div></div></div>'
+      +'<div class="status" id="status">Tap the disc to play</div>'
+      +(G.err?'<div class="err">'+esc(G.err)+'</div>':'')
+      +'<button class="link" onclick="skip()">Skip this song</button></div>'
+      + '';
+    bar = G.paper
+      ? '<div class="bar"><button class="btn" onclick="revealPaper()">Reveal year</button></div>'
+      : '<div class="bar"><button class="btn" '+(G.slot===null?'disabled':'')+' onclick="lock()">Lock it in</button></div>';
+  } else if(G.phase==="reveal"){
+    const r = G.res, s = r.song;
+    top = '<div class="reveal">'+(r.media.art?'<img src="'+esc(r.media.art)+'" alt="">':'<div class="noimg">&#9835;</div>')
+      +'<div class="year '+(G.paper?'':(r.ok?'ok':'no'))+'" style="'+(G.paper?'color:var(--cyan)':'')+'">'+s.y+'</div>'
+      +(G.paper?'':'<div class="verdict '+(r.ok?'ok':'no')+'">'+(r.ok?'Correct!':(G.solo?'Wrong. Strike '+p.strikes+' of 3':'Wrong. Card discarded'))+'</div>')
+      +'<div class="t">'+esc(s.t)+'</div><div class="a">'+esc(s.a)+'</div></div>';
+    const fin = over();
+    let label = "Next song";
+    if(fin) label = "See results";
+    else if(!G.solo) label = "Pass to "+esc(G.players[(G.cur+1)%G.players.length].name);
+    if(G.paper){ label = G.players.length>1 ? "Next song, "+esc(G.players[(G.cur+1)%G.players.length].name)+"'s turn" : "Next song"; }
+    bar = '<div class="bar"><button class="btn" onclick="next()">'+label+'</button>'
+      +(G.paper?'<div style="height:8px"></div><button class="btn alt" onclick="endPaper()">End game</button>':'')+'</div>';
+  }
+  const showTl = !G.paper && G.phase!=="error";
+  return chipsHTML()+'<div class="scroll">'+top+(showTl?timelineHTML():'')+'</div>'+bar;
+}
+
+function endHTML(){
+  const sorted = G.players.slice().sort((a,b)=>b.tl.length-a.tl.length);
+  let title, emoji;
+  if(G.solo){ const p=G.players[0]; const won=p.tl.length>=G.goal; title=won?"You did it!":"Game over"; emoji=won?"&#127942;":"&#128148;"; }
+  else { title = esc(G.players[G.cur].name)+" wins!"; emoji="&#127942;"; }
+  return '<div class="scroll"><div class="win"><div class="big">'+emoji+'</div><h2>'+title+'</h2>'
+    +'<div class="board">'+sorted.map(p=>'<div><span>'+esc(p.name)+'</span><span>'+p.tl.length+' cards</span></div>').join('')+'</div></div></div>'
+    +'<div class="bar"><button class="btn" onclick="newGame()">Play again</button><div style="height:8px"></div><button class="btn alt" onclick="G=null;render()">Change settings</button></div>';
+}
+
+render();
+</script>
+</body>
+</html>
