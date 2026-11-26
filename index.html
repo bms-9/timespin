@@ -352,7 +352,7 @@ function gameHTML(){
       +'<div class="vinyl"><div class="vlabel">?</div></div></div>'
       +'<div class="status" id="status">Tap the disc to play</div>'
       +(G.err?'<div class="err">'+esc(G.err)+'</div>':'')
-      +'<button class="link" onclick="skip()">Skip this song</button></div>'
+      +((G.paper||G.err)?'<button class="link" onclick="skip()">Skip this song</button>':'')+'</div>'
       + '';
     bar = G.paper
       ? '<div class="bar"><button class="btn" onclick="revealPaper()">Reveal year</button></div>'
