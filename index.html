@@ -72,7 +72,7 @@ input.name{width:100%;padding:13px 14px;margin-bottom:8px;border-radius:12px;bor
 .err{background:rgba(255,90,110,.12);border:1px solid var(--bad);border-radius:12px;padding:12px;margin:10px 0;font-size:14px;text-align:center}
 .hint{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
 #flash{position:fixed;inset:0;background:#ff0022;opacity:0;pointer-events:none;z-index:50;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:900;color:#fff}
-#flash.go{animation:fl 3.2s linear forwards}
+#flash.go{animation:fl 6s linear forwards}
 @keyframes fl{0%{opacity:.9}12%{opacity:0}24%{opacity:.9}36%{opacity:0}48%{opacity:.9}60%{opacity:0}72%{opacity:.85}100%{opacity:0}}
 .shake{animation:sh .5s}
 @keyframes sh{0%,100%{transform:none}20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
@@ -86,7 +86,7 @@ input.name{width:100%;padding:13px 14px;margin-bottom:8px;border-radius:12px;bor
 #flash .x{font-size:38px;text-align:center;line-height:1.15;margin-top:10px;text-shadow:0 4px 20px rgba(0,0,0,.5)}
 @keyframes fz{to{transform:scale(1) rotate(0)}}
 @keyframes gl{to{top:38.5%}}
-@keyframes fl{0%{opacity:1;background:#ff0022}10%{background:#7a0010}20%{background:#ff0022}30%{background:#7a0010}40%{background:#ff0022}80%{opacity:1}100%{opacity:0}}
+@keyframes fl{0%{opacity:1;background:#ff0022}5%{background:#7a0010}10%{background:#ff0022}15%{background:#7a0010}20%{background:#ff0022}25%{background:#7a0010}30%{background:#ff0022}35%{background:#7a0010}40%{background:#ff0022}45%{background:#7a0010}50%{background:#ff0022}92%{opacity:1}100%{opacity:0}}
 
 #fface img.f{filter:grayscale(1) contrast(1.3)}
 #fface .tint{position:absolute;inset:0;background:#ff1a1a;mix-blend-mode:multiply;z-index:1}
@@ -292,40 +292,57 @@ function revealPaper(){
   G.phase = "reveal"; au.pause(); render();
 }
 function endPaper(){ G=null; stopAudio(); render(); }
-let AC = null;
+let BUZZ_URL = null;
+function makeBuzz(){
+  if(BUZZ_URL) return BUZZ_URL;
+  const sr = 22050, honk = 1.15, gap = 0.18, n = Math.floor(sr*(honk*2+gap));
+  const pcm = new Int16Array(n);
+  const freqs = [196, 207.7, 392, 415.3, 588];   // dissonant game-show buzz, tuned for phone speakers
+  for(let i=0;i<n;i++){
+    const t = i/sr; let x = 0;
+    const inHonk = t < honk || (t > honk+gap && t < honk*2+gap);
+    if(inHonk){
+      for(const f of freqs){ x += ((t*f)%1 < 0.5 ? 1 : -1) * (f>400?0.6:1); }
+      x = Math.tanh(x*3);                          // hard distortion = loud + harsh
+      const lt = t < honk ? t : t-honk-gap;
+      const env = Math.min(1, lt/0.01) * Math.min(1, (honk-lt)/0.02);
+      x *= env;
+    }
+    pcm[i] = Math.max(-32767, Math.min(32767, x*32767));
+  }
+  const buf = new ArrayBuffer(44+n*2), v = new DataView(buf);
+  const w = (o,str)=>{ for(let k=0;k<str.length;k++) v.setUint8(o+k,str.charCodeAt(k)); };
+  w(0,"RIFF"); v.setUint32(4,36+n*2,true); w(8,"WAVE"); w(12,"fmt "); v.setUint32(16,16,true);
+  v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true); v.setUint32(28,sr*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,"data"); v.setUint32(40,n*2,true);
+  new Int16Array(buf,44).set(pcm);
+  BUZZ_URL = URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+  return BUZZ_URL;
+}
+const buzzAu = new Audio(); buzzAu.preload = "auto";
+function unlockSfx(){
+  try{ buzzAu.src = makeBuzz(); buzzAu.volume = 0; const p = buzzAu.play(); p && p.then(()=>{ buzzAu.pause(); buzzAu.currentTime=0; buzzAu.volume=1; }).catch(()=>{}); }catch(e){}
+  try{ const sy = window.speechSynthesis; if(sy){ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; sy.speak(u); } }catch(e){}
+}
+function yell(){
+  try{
+    const sy = window.speechSynthesis; if(!sy) return;
+    sy.cancel();
+    const u = new SpeechSynthesisUtterance("ALERT! ALERT! YOU ARE WRONG!");
+    u.pitch = 1.6; u.rate = 1.2; u.volume = 1;
+    const vs = sy.getVoices();
+    const v = vs.find(v=>/en/i.test(v.lang) && /(fred|zarvox|trinoids|bad news|bahh|whisper)/i.test(v.name)) || vs.find(v=>/en-US/i.test(v.lang));
+    if(v) u.voice = v;
+    sy.speak(u);
+  }catch(e){}
+}
 function buzz(){
   try{
-    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-    if(AC.state==="suspended") AC.resume();
-    const t = AC.currentTime;
-    const comp = AC.createDynamicsCompressor(); comp.threshold.value=-30; comp.ratio.value=20;
-    const dist = AC.createWaveShaper(); const n=1024, c=new Float32Array(n);
-    for(let i=0;i<n;i++){ const x=i*2/n-1; c[i]=Math.tanh(x*25); } dist.curve=c;
-    const g = AC.createGain(); g.gain.value=0;
-    dist.connect(g); g.connect(comp); comp.connect(AC.destination);
-    const pulses=[0,0.5,1.0], len=0.42;
-    pulses.forEach(off=>{
-      [[98,"sawtooth"],[104,"square"],[147,"sawtooth"],[196,"square"],[51,"square"]].forEach(([f,ty])=>{
-        const o=AC.createOscillator(); o.type=ty; o.frequency.value=f;
-        o.frequency.setValueAtTime(f,t+off); o.frequency.linearRampToValueAtTime(f*0.92,t+off+len);
-        o.connect(dist); o.start(t+off); o.stop(t+off+len);
-      });
-      g.gain.setValueAtTime(0,t+off); g.gain.linearRampToValueAtTime(1,t+off+0.01);
-      g.gain.setValueAtTime(1,t+off+len-0.02); g.gain.linearRampToValueAtTime(0,t+off+len);
-    });
-  }catch(e){}
-  try{
-    const sy = window.speechSynthesis;
-    if(sy){
-      sy.cancel();
-      const u = new SpeechSynthesisUtterance("ALERT. ALERT. YOU. ARE. WRONG.");
-      u.pitch = 0.1; u.rate = 0.85; u.volume = 1;
-      const v = sy.getVoices().find(v=>/en/i.test(v.lang) && /(fred|zarvox|trinoids|robot|daniel|google uk english male)/i.test(v.name));
-      if(v) u.voice = v;
-      sy.speak(u);
-    }
-  }catch(e){}
-  try{ navigator.vibrate && navigator.vibrate([400,100,400,100,400]); }catch(e){}
+    buzzAu.pause(); buzzAu.src = makeBuzz(); buzzAu.volume = 1; buzzAu.currentTime = 0;
+    buzzAu.onended = () => { yell(); buzzAu.onended = null; };
+    buzzAu.play().catch(()=>yell());
+  }catch(e){ yell(); }
+  try{ navigator.vibrate && navigator.vibrate([1150,180,1150,300,600]); }catch(e){}
   const f = document.getElementById("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
   const a = document.getElementById("app"); a.classList.remove("shake"); void a.offsetWidth; a.classList.add("shake");
 }
@@ -362,7 +379,7 @@ function setupHTML(){
    +'<div class="label">Mode</div><div class="seg"><button class="'+(!setup.paper?'on':'')+'" onclick="setup.paper=false;render()">On screen</button><button class="'+(setup.paper?'on':'')+'" onclick="setup.paper=true;render()">Paper cards</button></div>'
    +(setup.paper?'':'<div class="label">Cards to win</div><div class="seg">'+[5,7,10].map(n=>'<button class="'+(setup.goal===n?'on':'')+'" onclick="setup.goal='+n+';render()">'+n+'</button>').join('')+'</div>')
    +'<p class="hint">'+(setup.paper?'Paper mode: the phone only plays songs and reveals the year. Everyone writes the year on a slip of paper, places it in their row on the table, then you reveal and check.':(setup.n===1?'Solo: reach the goal before 3 wrong guesses.':'Pass the phone each turn. First to the goal wins.'))+'</p>'
-   +'</div><div class="bar"><button class="btn" onclick="newGame()">Start game</button></div>';
+   +'</div><div class="bar"><button class="btn" onclick="unlockSfx();newGame()">Start game</button></div>';
 }
 
 function chipsHTML(){
@@ -437,7 +454,7 @@ function endHTML(){
   else { title = esc(G.players[G.cur].name)+" wins!"; emoji="&#127942;"; }
   return '<div class="scroll"><div class="win"><div class="big">'+emoji+'</div><h2>'+title+'</h2>'
     +'<div class="board">'+sorted.map(p=>'<div><span>'+esc(p.name)+'</span><span>'+p.tl.length+' cards</span></div>').join('')+'</div></div></div>'
-    +'<div class="bar"><button class="btn" onclick="newGame()">Play again</button><div style="height:8px"></div><button class="btn alt" onclick="G=null;render()">Change settings</button></div>';
+    +'<div class="bar"><button class="btn" onclick="unlockSfx();newGame()">Play again</button><div style="height:8px"></div><button class="btn alt" onclick="G=null;render()">Change settings</button></div>';
 }
 
 render();
