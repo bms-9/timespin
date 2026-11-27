@@ -118,6 +118,28 @@ input.name{width:100%;padding:13px 14px;margin-bottom:8px;border-radius:12px;bor
 .rtxt{text-align:center;color:var(--cyan);font-weight:700;font-size:14px;margin:6px 0}
 .presets{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .presets button{padding:7px 10px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);font-size:13px;font-weight:700}
+
+.banner.drunk{background:rgba(46,229,157,.14);border:1px solid var(--good);color:#bfffe6}
+.tog{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tog input{display:none}
+.tog .knob{flex:none;width:52px;height:30px;border-radius:999px;background:#3a3170;position:relative;transition:.2s}
+.tog .knob:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s}
+.tog input:checked+.knob{background:var(--good)}
+.tog input:checked+.knob:after{left:25px}
+.tog .tt{font-size:13px;color:var(--muted);font-weight:600}
+/* drunk goggles */
+#app.drunk .scroll{animation:dsway 3.2s ease-in-out infinite, dblur 2.1s ease-in-out infinite;transform-origin:50% 40%}
+#app.drunk .slot,#app.drunk .card{animation:ddrift 1.9s ease-in-out infinite alternate}
+#app.drunk .slot:nth-child(3n){animation-duration:1.3s;animation-delay:-.4s}
+#app.drunk .slot:nth-child(3n+1){animation-duration:2.4s;animation-delay:-1.1s;animation-direction:alternate-reverse}
+#app.drunk .card:nth-child(2n){animation-duration:1.6s;animation-delay:-.7s;animation-direction:alternate-reverse}
+#app.drunk .disc{animation:dwander 4s ease-in-out infinite}
+#app.drunk .tl{text-shadow:6px 0 0 rgba(255,79,163,.45),-6px 0 0 rgba(61,224,255,.45)}
+#app.drunk .chips,#app.drunk .bar{animation:dsway 2.6s ease-in-out infinite reverse}
+@keyframes dsway{0%,100%{transform:rotate(-2.5deg) skewX(4deg) translateX(-8px)}25%{transform:rotate(1.5deg) skewX(-6deg) scale(1.03)}50%{transform:rotate(3deg) skewX(3deg) translateX(10px)}75%{transform:rotate(-1deg) skewY(2deg) scale(.97)}}
+@keyframes dblur{0%,100%{filter:blur(.4px) hue-rotate(0deg)}50%{filter:blur(1.6px) hue-rotate(40deg)}}
+@keyframes ddrift{0%{transform:translateX(-38px) rotate(-4deg)}50%{transform:translateX(12px) translateY(6px) rotate(2deg)}100%{transform:translateX(40px) rotate(5deg)}}
+@keyframes dwander{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(60px,10px) rotate(12deg)}50%{transform:translate(-50px,-6px) rotate(-10deg)}75%{transform:translate(30px,14px) rotate(6deg)}}
 </style>
 </head>
 <body>
@@ -205,7 +227,7 @@ SONGS.forEach(s=>{ const p=PRE[s.t+"|"+s.a]; if(p && p[2] && !KEEP_YEAR.has(s.t+
 const au = new Audio();
 au.preload = "auto";
 let G = null;
-let setup = {n:2, goal:7, paper:false, back:false, from:1950, to:2020, names:["Player 1","Player 2","Player 3","Player 4","Player 5","Player 6"]};
+let setup = {n:2, goal:7, paper:false, back:false, drunk:true, from:1950, to:2020, names:["Player 1","Player 2","Player 3","Player 4","Player 5","Player 6"]};
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -275,7 +297,7 @@ function newGame(){
     const s = deck[di++]; markPlayed(s);
     players.push({name:(setup.names[i]||"").trim()||("Player "+(i+1)), tl:[s], strikes:0, out:false, sabUsed:false, sabBy:null});
   }
-  G = {players, cur:0, goal:setup.goal, paper:setup.paper, back:setup.back, solo:n===1, pool:POOL, stage:"reg", queue:[], alive:[], odRes:{}, round:0, winner:null, lastOk:null, deck, di, song:null, media:null, slot:null, phase:"loading", res:null, err:null, playing:false, lastNew:null};
+  G = {players, cur:0, goal:setup.goal, paper:setup.paper, back:setup.back, drunk:setup.drunk, solo:n===1, pool:POOL, stage:"reg", queue:[], alive:[], odRes:{}, round:0, winner:null, lastOk:null, deck, di, song:null, media:null, slot:null, phase:"loading", res:null, err:null, playing:false, lastNew:null};
   nextSong();
 }
 
@@ -364,9 +386,9 @@ function lock(){
   const p = G.players[G.cur], tl = p.tl, y = G.song.y, i = G.slot;
   const ok = (i===0 || tl[i-1].y <= y) && (i===tl.length || y <= tl[i].y);
   G.res = {ok, song:G.song, media:G.media}; G.lastOk = ok; p.lastWrong = !ok; hbOff(); p.sabBy = null;
-  if(ok){ tl.splice(i,0,G.song); G.lastNew = G.song; p.right=(p.right||0)+1; } else { p.strikes++; G.lastNew = null; }
+  if(ok){ tl.splice(i,0,G.song); G.lastNew = G.song; p.right=(p.right||0)+1; p.streak=(p.streak||0)+1; } else { p.strikes++; G.lastNew = null; p.streak=0; }
   G.phase = "reveal"; au.pause(); render();
-  if(!ok) buzz(p.strikes); else ding(p.right);
+  if(!ok) buzz(p.strikes); else ding(1);
 }
 function revealPaper(){
   if(G.phase!=="listen") return;
@@ -519,6 +541,8 @@ function sabModalHTML(){
   }
   return '<div class="modal" onclick="if(event.target===this)sabClose()"><div class="sheet">'+body+'<button class="btn alt" onclick="sabClose()">Cancel</button></div></div>';
 }
+function isDrunk(){ return G && G.drunk && !G.paper && G.phase==="listen" && (G.players[G.cur].streak||0) >= 4; }
+function drunkBannerHTML(){ return isDrunk() ? '<div class="banner drunk"><b>&#129396; DRUNK GOGGLES ON</b>'+esc(G.players[G.cur].name)+' is on a '+G.players[G.cur].streak+'-song streak. Good luck aiming.</div>' : ""; }
 function bannerHTML(){
   if(G.paper || G.solo) return "";
   const p = G.players[G.cur];
@@ -531,9 +555,11 @@ function bannerHTML(){
 function render(keepScroll){
   const app = $("#app");
   const sc = keepScroll && $(".scroll") ? $(".scroll").scrollTop : 0;
+  app.classList.remove("drunk");
   if(!G){ app.innerHTML = setupHTML(); return; }
   if(G.phase==="end"){ app.innerHTML = endHTML(); return; }
   app.innerHTML = gameHTML();
+  app.classList.toggle("drunk", isDrunk());
   if(keepScroll && $(".scroll")) $(".scroll").scrollTop = sc;
   if(G.phase==="listen") syncDisc();
 }
@@ -550,6 +576,7 @@ function setupHTML(){
    +'<div class="rrow"><span>To</span><input type="range" min="1950" max="2020" step="10" value="'+setup.to+'" oninput="setRange(\'to\',this.value)"><b id="toLbl">'+decLabel(setup.to)+'</b></div>'
    +'<div class="rtxt" id="rangeTxt">'+rangeText()+'</div>'
    +'<div class="presets">'+[["All",1950,2020],["80s",1980,1980],["2000s",2000,2000],["70s-2000s",1970,2000],["90s-now",1990,2020]].map(x=>'<button onclick="rangePreset('+x[1]+','+x[2]+')">'+x[0]+'</button>').join('')+'</div></div>'
+   +'<div class="label">Drunk goggles</div><label class="tog"><input type="checkbox" '+(setup.drunk?'checked':'')+' onchange="setup.drunk=this.checked"><span class="knob"></span><span class="tt">4 correct in a row makes your screen wobble and move</span></label>'
    +'<div class="label">Backwards mode</div><div class="seg"><button class="'+(!setup.back?'on':'')+'" onclick="setup.back=false;render()">Normal</button><button class="'+(setup.back?'on':'')+'" onclick="setup.back=true;render()">&#9194; All backwards</button></div>'
    +(setup.back?'<p class="hint">Every song plays in reverse. Sabotages are off in this mode.</p>':'')
    +'<div class="label">Mode</div><div class="seg"><button class="'+(!setup.paper?'on':'')+'" onclick="setup.paper=false;render()">On screen</button><button class="'+(setup.paper?'on':'')+'" onclick="setup.paper=true;render()">Paper cards</button></div>'
@@ -620,7 +647,7 @@ function gameHTML(){
       +(G.paper?'<div style="height:8px"></div><button class="btn alt" onclick="endPaper()">End game</button>':'')+'</div>';
   }
   const showTl = !G.paper && G.phase!=="error";
-  return chipsHTML()+'<div class="scroll">'+(G.phase==="listen"?sabBannerHTML()+bannerHTML():'')+top+(showTl?timelineHTML():'')+'</div>'+bar+sabModalHTML();
+  return chipsHTML()+'<div class="scroll">'+(G.phase==="listen"?drunkBannerHTML()+sabBannerHTML()+bannerHTML():'')+top+(showTl?timelineHTML():'')+'</div>'+bar+sabModalHTML();
 }
 
 function endHTML(){
