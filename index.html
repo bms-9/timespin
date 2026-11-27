@@ -375,14 +375,14 @@ function chaosOn(id){ return G && G.chaosRule && G.chaosRule.id===id; }
 function startSpin(){
   if(!G.chaos || G.paper) return;
   G.spinning = true; render(true); let i = 0, delay = 60, steps = 0;
-  const total = 18 + Math.floor(Math.random()*9);
+  const total = 16 + Math.floor(Math.random()*6);
   const tick = () => {
     if(!G || G.phase!=="listen"){ G && (G.spinning=false); return; }
     const el = document.getElementById("wheelTxt");
     if(el){ const r = CHAOS[i%CHAOS.length]; el.innerHTML = r.icon+" "+r.name; }
     i++; steps++;
     if(steps>=total){ G.spinning=false; render(true); return; }
-    delay *= 1.12; setTimeout(tick, delay);
+    delay *= 1.08; setTimeout(tick, delay);
   };
   // make the wheel land on the chosen rule
   i = (CHAOS.indexOf(G.chaosRule) - total + 1 + CHAOS.length*10) % CHAOS.length;
