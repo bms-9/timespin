@@ -227,7 +227,7 @@ SONGS.forEach(s=>{ const p=PRE[s.t+"|"+s.a]; if(p && p[2] && !KEEP_YEAR.has(s.t+
 const au = new Audio();
 au.preload = "auto";
 let G = null;
-let setup = {n:2, goal:7, paper:false, back:false, drunk:true, from:1950, to:2020, names:["Player 1","Player 2","Player 3","Player 4","Player 5","Player 6"]};
+let setup = {n:2, goal:7, paper:false, back:false, drunk:true, chip:true, from:1950, to:2020, names:["Player 1","Player 2","Player 3","Player 4","Player 5","Player 6"]};
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -297,7 +297,7 @@ function newGame(){
     const s = deck[di++]; markPlayed(s);
     players.push({name:(setup.names[i]||"").trim()||("Player "+(i+1)), tl:[s], strikes:0, out:false, sabUsed:false, sabBy:null});
   }
-  G = {players, cur:0, goal:setup.goal, paper:setup.paper, back:setup.back, drunk:setup.drunk, solo:n===1, pool:POOL, stage:"reg", queue:[], alive:[], odRes:{}, round:0, winner:null, lastOk:null, deck, di, song:null, media:null, slot:null, phase:"loading", res:null, err:null, playing:false, lastNew:null};
+  G = {players, cur:0, goal:setup.goal, paper:setup.paper, back:setup.back, drunk:setup.drunk, chip:setup.chip, solo:n===1, pool:POOL, stage:"reg", queue:[], alive:[], odRes:{}, round:0, winner:null, lastOk:null, deck, di, song:null, media:null, slot:null, phase:"loading", res:null, err:null, playing:false, lastNew:null};
   nextSong();
 }
 
@@ -341,7 +341,7 @@ async function nextSong(){
           try{ if(G.revUrl) URL.revokeObjectURL(G.revUrl); G.revUrl = await reversedUrl(m.url); src = G.revUrl; G.rev = true; }
           catch(e){ G.rev = "fail"; }
         }
-        G.phase = "listen"; au.src = src; render(); prefetch(); if(hbDue()) hbOn(); return; }
+        G.phase = "listen"; au.src = src; applyRate(); render(); prefetch(); if(hbDue()) hbOn(); return; }
     }catch(e){
       G.err = "Could not reach the music service. Check your connection.";
       G.phase = "error"; render(); return;
@@ -366,6 +366,7 @@ au.addEventListener("timeupdate", ()=>{
 });
 au.addEventListener("ended", ()=>{ G.playing=false; syncDisc(); });
 au.addEventListener("pause", ()=>{ if(G){G.playing=false; syncDisc();} });
+au.addEventListener("play", ()=>{ if(G) applyRate(); });
 au.addEventListener("playing", ()=>{ if(G){G.playing=true; syncDisc();} });
 au.addEventListener("error", ()=>{ if(G && G.phase==="listen"){ G.err="This clip will not play. Skip it."; render(); } });
 
@@ -541,8 +542,17 @@ function sabModalHTML(){
   }
   return '<div class="modal" onclick="if(event.target===this)sabClose()"><div class="sheet">'+body+'<button class="btn alt" onclick="sabClose()">Cancel</button></div></div>';
 }
-function isDrunk(){ return G && G.drunk && !G.paper && G.phase==="listen" && (G.players[G.cur].streak||0) >= 4; }
-function drunkBannerHTML(){ return isDrunk() ? '<div class="banner drunk"><b>&#129396; DRUNK GOGGLES ON</b>'+esc(G.players[G.cur].name)+' is on a '+G.players[G.cur].streak+'-song streak. Good luck aiming.</div>' : ""; }
+function drunkWhy(){ if(!G || G.paper) return null; const p=G.players[G.cur]; if((p.streak||0)>=4) return "streak"; if(p.tl.length===G.goal-1) return "close"; return null; }
+function isDrunk(){ return G && G.drunk && G.phase==="listen" && !!drunkWhy(); }
+function isChip(){ return G && G.chip && !G.paper && !!drunkWhy(); }
+function applyRate(){ const r = isChip() ? 1.45 : 1; try{ au.preservesPitch = false; au.mozPreservesPitch = false; au.webkitPreservesPitch = false; au.defaultPlaybackRate = r; au.playbackRate = r; }catch(e){} }
+function drunkBannerHTML(){
+  const why = drunkWhy(); if(!why || (!isDrunk() && !isChip())) return "";
+  const p = G.players[G.cur];
+  const t = (isDrunk()?'&#129396; DRUNK GOGGLES':'')+(isDrunk()&&isChip()?' + ':'')+(isChip()?'&#128063; CHIPMUNK':'');
+  const r = why==="streak" ? esc(p.name)+' is on a '+p.streak+'-song streak.' : esc(p.name)+' is 1 card from winning.';
+  return '<div class="banner drunk"><b>'+t+'</b>'+r+' Good luck.</div>';
+}
 function bannerHTML(){
   if(G.paper || G.solo) return "";
   const p = G.players[G.cur];
@@ -576,7 +586,8 @@ function setupHTML(){
    +'<div class="rrow"><span>To</span><input type="range" min="1950" max="2020" step="10" value="'+setup.to+'" oninput="setRange(\'to\',this.value)"><b id="toLbl">'+decLabel(setup.to)+'</b></div>'
    +'<div class="rtxt" id="rangeTxt">'+rangeText()+'</div>'
    +'<div class="presets">'+[["All",1950,2020],["80s",1980,1980],["2000s",2000,2000],["70s-2000s",1970,2000],["90s-now",1990,2020]].map(x=>'<button onclick="rangePreset('+x[1]+','+x[2]+')">'+x[0]+'</button>').join('')+'</div></div>'
-   +'<div class="label">Drunk goggles</div><label class="tog"><input type="checkbox" '+(setup.drunk?'checked':'')+' onchange="setup.drunk=this.checked"><span class="knob"></span><span class="tt">4 correct in a row makes your screen wobble and move</span></label>'
+   +'<div class="label">Drunk goggles</div><label class="tog"><input type="checkbox" '+(setup.drunk?'checked':'')+' onchange="setup.drunk=this.checked"><span class="knob"></span><span class="tt">Screen wobbles on a 4-in-a-row streak or 1 card from winning</span></label>'
+   +'<div class="label">Chipmunk songs</div><label class="tog"><input type="checkbox" '+(setup.chip?'checked':'')+' onchange="setup.chip=this.checked"><span class="knob"></span><span class="tt">High-pitched, sped-up song on a 4-in-a-row streak or 1 card from winning</span></label>'
    +'<div class="label">Backwards mode</div><div class="seg"><button class="'+(!setup.back?'on':'')+'" onclick="setup.back=false;render()">Normal</button><button class="'+(setup.back?'on':'')+'" onclick="setup.back=true;render()">&#9194; All backwards</button></div>'
    +(setup.back?'<p class="hint">Every song plays in reverse. Sabotages are off in this mode.</p>':'')
    +'<div class="label">Mode</div><div class="seg"><button class="'+(!setup.paper?'on':'')+'" onclick="setup.paper=false;render()">On screen</button><button class="'+(setup.paper?'on':'')+'" onclick="setup.paper=true;render()">Paper cards</button></div>'
