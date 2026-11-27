@@ -255,7 +255,7 @@ function freshDeck(pool){
   return shuffle(fresh).concat(shuffle(old));
 }
 function pool(){ const a = Math.min(setup.from,setup.to), b = Math.max(setup.from,setup.to)+9; return SONGS.filter(x=>x.y>=a && x.y<=b); }
-function decLabel(d){ return d===1950?"1950s":d===2020?"2020s":(String(d).slice(2)+"s"); }
+function decLabel(d){ return d>=2000||d===1950 ? d+"s" : String(d).slice(2)+"s"; }
 function rangeText(){ const a=Math.min(setup.from,setup.to), b=Math.max(setup.from,setup.to); return (a===b? decLabel(a) : decLabel(a)+" to "+decLabel(b))+" &middot; "+pool().length+" songs"; }
 function setRange(which, v){
   setup[which] = +v;
