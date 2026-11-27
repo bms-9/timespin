@@ -178,7 +178,7 @@ SONGS.forEach(s=>{ const p=PRE[s.t+"|"+s.a]; if(p && p[2] && !KEEP_YEAR.has(s.t+
 const au = new Audio();
 au.preload = "auto";
 let G = null;
-let setup = {n:2, goal:7, paper:false, names:["Player 1","Player 2","Player 3","Player 4"]};
+let setup = {n:2, goal:7, paper:false, names:["Player 1","Player 2","Player 3","Player 4","Player 5","Player 6"]};
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -372,7 +372,7 @@ function setupHTML(){
   for(let i=0;i<setup.n;i++) nm.push('<input class="name" maxlength="14" value="'+esc(setup.names[i])+'" oninput="setup.names['+i+']=this.value" placeholder="Player '+(i+1)+'">');
   return '<div class="scroll">'
    +'<h1><span>TimeSpin</span></h1><p class="sub">Hear it. Guess when. Build your timeline.</p>'
-   +'<div class="label">Players</div><div class="seg">'+[1,2,3,4].map(n=>'<button class="'+(setup.n===n?'on':'')+'" onclick="setup.n='+n+';render()">'+n+'</button>').join('')+'</div>'
+   +'<div class="label">Players</div><div class="seg">'+[1,2,3,4,5,6].map(n=>'<button class="'+(setup.n===n?'on':'')+'" onclick="setup.n='+n+';render()">'+n+'</button>').join('')+'</div>'
    +'<div class="label">Names</div>'+nm.join('')
    +'<div class="label">Mode</div><div class="seg"><button class="'+(!setup.paper?'on':'')+'" onclick="setup.paper=false;render()">On screen</button><button class="'+(setup.paper?'on':'')+'" onclick="setup.paper=true;render()">Paper cards</button></div>'
    +(setup.paper?'':'<div class="label">Cards to win</div><div class="seg">'+[5,7,10].map(n=>'<button class="'+(setup.goal===n?'on':'')+'" onclick="setup.goal='+n+';render()">'+n+'</button>').join('')+'</div>')
