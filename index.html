@@ -175,6 +175,10 @@ input.name{width:100%;padding:13px 14px;margin-bottom:8px;border-radius:12px;bor
 #app.blackout ~ #blackfx{display:block}
 #app.blackout .bar{position:relative;z-index:36}
 #app.blackout .bar .btn{box-shadow:0 0 24px rgba(255,79,163,.8)}
+
+#app.spinmode .scroll{animation:spinall 5s linear infinite !important;transform-origin:50% 45%}
+#app.spinmode .chips{animation:spinall 3s linear infinite reverse}
+@keyframes spinall{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -399,7 +403,8 @@ const CHAOS = [
   {id:"black", name:"BLACKOUT",       icon:"&#127761;", desc:"Lights out. Your finger is the only flashlight."},
   {id:"hide",  name:"HIDDEN YEARS",   icon:"&#10067;", desc:"Your timeline years are hidden. Remember them."},
   {id:"static",name:"RADIO STATIC",   icon:"&#128251;", desc:"Bad car radio. Listen through the noise."},
-  {id:"stutter",name:"STUTTER",       icon:"&#128191;", desc:"Scratched CD. It skips around."}
+  {id:"stutter",name:"STUTTER",       icon:"&#128191;", desc:"Scratched CD. It skips around."},
+  {id:"spin",  name:"SPIN CYCLE",     icon:"&#127744;", desc:"The whole screen spins. He is laughing at you."}
 ];
 function chaosOn(id){ return G && G.chaosRule && G.chaosRule.id===id; }
 function startSpin(){
@@ -411,7 +416,7 @@ function startSpin(){
     const el = document.getElementById("wheelTxt");
     if(el){ const r = CHAOS[i%CHAOS.length]; el.innerHTML = r.icon+" "+r.name; }
     i++; steps++;
-    if(steps>=total){ G.spinning=false; render(true); return; }
+    if(steps>=total){ G.spinning=false; render(true); if(chaosOn("spin")) laughLoop(true); return; }
     delay *= 1.08; setTimeout(tick, delay);
   };
   // make the wheel land on the chosen rule
@@ -461,6 +466,12 @@ function laugh(){
   if(G && G.quiet) return;
   try{ if(laughAu.src!==LAUGH_MP3) laughAu.src = LAUGH_MP3; laughAu.volume = 1; laughAu.currentTime = 0; laughAu.play().catch(()=>{}); }catch(e){}
 }
+function laughLoop(on){
+  try{
+    if(on){ if(G && G.quiet) return; laughAu.loop = true; if(laughAu.src!==LAUGH_MP3) laughAu.src = LAUGH_MP3; laughAu.volume = 1; laughAu.currentTime = 0; laughAu.play().catch(()=>{}); }
+    else { laughAu.loop = false; laughAu.pause(); }
+  }catch(e){}
+}
 function devilPop(){
   let d = document.getElementById("devilpop");
   if(!d){
@@ -482,7 +493,7 @@ function hbFx(on){ const f=document.getElementById("hbfx"); if(f) f.classList.to
 function hbOn(){ hbFx(true); if(G && G.quiet) return; try{ if(!hbAu.paused) return; if(hbAu.src!==HB_MP3) hbAu.src = HB_MP3; hbAu.volume = 1; hbAu.play().catch(()=>{}); }catch(e){} }
 function hbOff(){ hbFx(false); try{ hbAu.pause(); hbAu.currentTime = 0; }catch(e){} }
 function hbDue(){ return G && G.phase==="listen" && ((!G.paper && G.players[G.cur].lastWrong) || au.currentTime >= 20); }
-function stopAudio(){ try{au.pause();}catch(e){} hbOff(); staticOff(); stutterOff(); G && (G.playing=false); }
+function stopAudio(){ try{au.pause();}catch(e){} hbOff(); staticOff(); stutterOff(); laughLoop(false); G && (G.playing=false); }
 au.addEventListener("timeupdate", ()=>{
   const el = $("#ring"); if(!el || !au.duration) return;
   const C = 2*Math.PI*96;
@@ -513,7 +524,7 @@ function lock(){
   if(G.phase!=="listen" || G.slot===null) return;
   const p = G.players[G.cur], tl = p.tl, y = G.song.y, i = G.slot;
   const ok = (i===0 || tl[i-1].y <= y) && (i===tl.length || y <= tl[i].y);
-  G.res = {ok, song:G.song, media:G.media}; G.lastOk = ok; p.lastWrong = !ok; hbOff(); staticOff(); stutterOff(); p.sabBy = null; p.chaosBy = null;
+  G.res = {ok, song:G.song, media:G.media}; G.lastOk = ok; p.lastWrong = !ok; hbOff(); staticOff(); stutterOff(); laughLoop(false); p.sabBy = null; p.chaosBy = null;
   if(ok){ tl.splice(i,0,G.song); G.lastNew = G.song; p.right=(p.right||0)+1; p.streak=(p.streak||0)+1; } else { p.strikes++; G.lastNew = null; p.streak=0; }
   G.phase = "reveal"; au.pause(); render();
   if(!ok) buzz(p.strikes); else if(!G.quiet) ding(1);
@@ -694,12 +705,13 @@ function bannerHTML(){
 function render(keepScroll){
   const app = $("#app");
   const sc = keepScroll && $(".scroll") ? $(".scroll").scrollTop : 0;
-  app.classList.remove("drunk"); app.classList.remove("blackout");
+  app.classList.remove("drunk"); app.classList.remove("blackout"); app.classList.remove("spinmode");
   if(!G){ app.innerHTML = setupHTML(); return; }
   if(G.phase==="end"){ app.innerHTML = endHTML(); return; }
   app.innerHTML = gameHTML();
   app.classList.toggle("drunk", isDrunk());
   app.classList.toggle("blackout", !!(G.phase==="listen" && chaosOn("black") && !G.spinning));
+  app.classList.toggle("spinmode", !!(G.phase==="listen" && chaosOn("spin") && !G.spinning));
   if(keepScroll && $(".scroll")) $(".scroll").scrollTop = sc;
   if(G.phase==="listen") syncDisc();
 }
@@ -719,7 +731,7 @@ function setupHTML(){
    +'<div class="label">Sabotages (1 of each per player, used at the end of your own turn)</div>'
    +'<label class="tog"><input type="checkbox" '+(setup.sabBack?'checked':'')+' onchange="setup.sabBack=this.checked"><span class="knob"></span><span class="tt">&#128163; Backwards: target\'s next song plays in reverse</span></label><div style="height:8px"></div>'
    +'<label class="tog"><input type="checkbox" '+(setup.sabChaos?'checked':'')+' onchange="setup.sabChaos=this.checked"><span class="knob"></span><span class="tt">&#127905; Chaos Wheel: target gets a Chaos Wheel spin on their next turn</span></label>'
-   +'<div class="label">&#127905; Chaos Wheel</div><label class="tog"><input type="checkbox" '+(setup.chaos?'checked':'')+' onchange="setup.chaos=this.checked"><span class="knob"></span><span class="tt">Every turn spins a random rule: backwards, chipmunk, slow-mo, 5-second flash, drunk goggles, blackout, hidden years, radio static or stutter</span></label>'
+   +'<div class="label">&#127905; Chaos Wheel</div><label class="tog"><input type="checkbox" '+(setup.chaos?'checked':'')+' onchange="setup.chaos=this.checked"><span class="knob"></span><span class="tt">Every turn spins a random rule: backwards, chipmunk, slow-mo, 5-second flash, drunk goggles, blackout, hidden years, radio static, stutter or spin cycle</span></label>'
    +'<div class="label">Drunk goggles</div><label class="tog"><input type="checkbox" '+(setup.drunk?'checked':'')+' onchange="setup.drunk=this.checked"><span class="knob"></span><span class="tt">Screen wobbles on a 4-in-a-row streak or 1 card from winning</span></label>'
    +'<div class="label">Chipmunk songs</div><label class="tog"><input type="checkbox" '+(setup.chip?'checked':'')+' onchange="setup.chip=this.checked"><span class="knob"></span><span class="tt">High-pitched, sped-up song on a 4-in-a-row streak or 1 card from winning</span></label>'
    +'<div class="label">Quiet mode</div><label class="tog"><input type="checkbox" '+(setup.quiet?'checked':'')+' onchange="setup.quiet=this.checked"><span class="knob"></span><span class="tt">Mutes the buzzer, airhorn, yell, ding and heartbeat. Songs and screen effects stay.</span></label>'
