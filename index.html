@@ -295,20 +295,18 @@ function endPaper(){ G=null; stopAudio(); render(); }
 let BUZZ_URL = null;
 function makeBuzz(){
   if(BUZZ_URL) return BUZZ_URL;
-  const sr = 22050, honk = 1.15, gap = 0.18, n = Math.floor(sr*(honk*2+gap));
+  const sr = 22050, len = 1.55, n = Math.floor(sr*len);
   const pcm = new Int16Array(n);
-  const freqs = [196, 207.7, 392, 415.3, 588];   // dissonant game-show buzz, tuned for phone speakers
+  let ph1=0, ph2=0, ph3=0;
   for(let i=0;i<n;i++){
-    const t = i/sr; let x = 0;
-    const inHonk = t < honk || (t > honk+gap && t < honk*2+gap);
-    if(inHonk){
-      for(const f of freqs){ x += ((t*f)%1 < 0.5 ? 1 : -1) * (f>400?0.6:1); }
-      x = Math.tanh(x*3);                          // hard distortion = loud + harsh
-      const lt = t < honk ? t : t-honk-gap;
-      const env = Math.min(1, lt/0.01) * Math.min(1, (honk-lt)/0.02);
-      x *= env;
-    }
-    pcm[i] = Math.max(-32767, Math.min(32767, x*32767));
+    const t = i/sr;
+    const drop = 1 - 0.04*(t/len);                 // slight pitch sag like the real strike buzzer
+    ph1 += 131*drop/sr; ph2 += 139*drop/sr; ph3 += 262*drop/sr;
+    let x = (ph1%1<0.5?1:-1) + (ph2%1<0.5?1:-1)*0.9 + (ph3%1<0.3?1:-1)*0.5;
+    x *= 0.75 + 0.25*Math.sin(2*Math.PI*38*t);    // raspy rattle
+    x = Math.tanh(x*4);                            // heavy distortion: harmonics a phone speaker can push loud
+    const env = Math.min(1, t/0.008) * Math.min(1, (len-t)/0.06);
+    pcm[i] = Math.max(-32767, Math.min(32767, x*env*32767));
   }
   const buf = new ArrayBuffer(44+n*2), v = new DataView(buf);
   const w = (o,str)=>{ for(let k=0;k<str.length;k++) v.setUint8(o+k,str.charCodeAt(k)); };
@@ -342,7 +340,7 @@ function buzz(){
     buzzAu.onended = () => { yell(); buzzAu.onended = null; };
     buzzAu.play().catch(()=>yell());
   }catch(e){ yell(); }
-  try{ navigator.vibrate && navigator.vibrate([1150,180,1150,300,600]); }catch(e){}
+  try{ navigator.vibrate && navigator.vibrate([1550]); }catch(e){}
   const f = document.getElementById("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
   const a = document.getElementById("app"); a.classList.remove("shake"); void a.offsetWidth; a.classList.add("shake");
 }
