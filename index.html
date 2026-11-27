@@ -478,15 +478,13 @@ const JUMP_A = "data:audio/mpeg;base64,SUQzBAAAAAABClRYWFgAAAASAAADbWFqb3JfYnJhb
 const jumpAu = new Audio(); jumpAu.preload = "auto";
 function jumpscare(){
   const fx = document.getElementById("jumpfx"), vid = document.getElementById("jumpv");
-  const wasPlaying = !au.paused;
-  try{ au.pause(); }catch(e){}
   if(vid.src !== JUMP_V) vid.src = JUMP_V;
   vid.muted = true; vid.currentTime = 0;
   fx.classList.add("on");
   vid.play().catch(()=>{});
   if(!(G && G.quiet)){ try{ jumpAu.src = JUMP_A; jumpAu.volume = 1; jumpAu.currentTime = 0; jumpAu.play().catch(()=>{}); }catch(e){} }
   try{ navigator.vibrate && navigator.vibrate([600,80,600]); }catch(e){}
-  const done = () => { fx.classList.remove("on"); vid.onended = null; if(wasPlaying && G && G.phase==="listen"){ au.play().catch(()=>{}); } };
+  const done = () => { fx.classList.remove("on"); vid.onended = null; };
   vid.onended = done;
   clearTimeout(window.__jumpT); window.__jumpT = setTimeout(done, 3200);
 }
