@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#14102b">
-<title>Babycamcams Game</title>
+<title>Hitster V2</title>
 <style>
 :root{
   --bg:#14102b; --bg2:#1d1740; --card:#262050; --line:#3a3170;
@@ -745,7 +745,7 @@ function setupHTML(){
   const nm = [];
   for(let i=0;i<setup.n;i++) nm.push('<input class="name" maxlength="14" value="'+esc(setup.names[i])+'" oninput="setup.names['+i+']=this.value" placeholder="Player '+(i+1)+'">');
   return '<div class="scroll">'
-   +'<h1><span>Babycamcams Game</span></h1><p class="sub">Hear it. Guess when. Build your timeline.</p>'
+   +'<h1><span>Hitster V2</span></h1><p class="sub">Hear it. Guess when. Build your timeline.</p>'
    +'<div class="label">Players</div><div class="seg">'+[1,2,3,4,5,6].map(n=>'<button class="'+(setup.n===n?'on':'')+'" onclick="setup.n='+n+';render()">'+n+'</button>').join('')+'</div>'
    +'<div class="label">Names</div>'+nm.join('')
    +'<div class="label">Song years</div><div class="range">'
